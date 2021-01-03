@@ -1,5 +1,6 @@
 <!--  ABOUT THE PROJECT -->
 ##About the project
+
 Quick script to take some of the pain out of generating the cksb public biomes
  config
 As an addition to the previous document(March 2020 - Present)
@@ -11,6 +12,7 @@ Note that the example biomes.yml given here is the default given by Greenhouses
 
 <!-- REQUIREMENTS -->
 ##Requirements
+
 https://www.lfd.uci.edu/~gohlke/pythonlibs/
 
 Folders containing item and block textures are also currently required for this
