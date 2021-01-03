@@ -53,7 +53,7 @@ def map_sat(r1, g1, b1, r2, g2, b2):
 
 
 def color_image(img, r, g, b):
-    pixels = fix_channels(img)
+    pixels = img
     height, width, channels = img.shape
     img_rows = []
     img_stitched = None
@@ -85,11 +85,12 @@ def color_image(img, r, g, b):
         else:
             img_stitched = np.concatenate((img_stitched, i), axis=0)
 
-    return img
+    return img_stitched
 
 
-def color_image_checked(img, r, g, b):
-    if not is_grayscale(img):
+def color_image_checked(img, r, g, b, check=True):
+    img = fix_channels(img)
+    if check and not is_grayscale(img):
         return img
     return color_image(img, r, g, b)
 

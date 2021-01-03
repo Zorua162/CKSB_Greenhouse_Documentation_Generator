@@ -1,20 +1,27 @@
 # Module for editing docx files
-from tqdm import tqdm
-
-
+import cv2
 from docx import Document
 from docx.shared import Cm, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
+
 # Module for date for auto last updated
 from datetime import date
+
 # Module for parsiing the config file
+
 import yaml
-# For getting icons
-from os import listdir
-# Path for creating icon path
-from os.path import join
+
 # Warn if something goes wrong
 import warnings
+
+from pathlib import Path
+import converter.images as images
+
+
+CONFIG_PATH = "./biomes.yml/"
+TEXTURES_PATH = "./textures/"
+ICONS_PATH = "./icons/"
+SAVE_PATH = "./GreenhouseDocumentation.docx"
 
 
 def humanify(string):
@@ -28,42 +35,32 @@ def get_icon(icon):
     icon = icon.lower()
     icon_blockless = icon.replace('_block', '')
     icon_top = icon_blockless + '_top'
-    # print(listdir('./block'))
-    iconimg = icon + '.png'
-    iconimg_blockless = icon_blockless + '.png'
-    iconimg_top = icon_top + '.png'
-    block_dir = listdir('./block')
-    if iconimg in listdir('./item'):
-        imagepath = join(r'./item', iconimg)
-    elif iconimg in block_dir:
-        imagepath = join(r'./block', iconimg)
-    elif iconimg_blockless in block_dir:
-        imagepath = join(r'./block', iconimg_blockless)
-    elif iconimg_top in block_dir:
-        imagepath = join(r'./block', iconimg_top)
-    else:
-        warnings.warn(f'Could not find the icon for this item')
-        imagepath = None
-    return imagepath
+    to_search = [icon + '.png', icon_blockless + '.png', icon_top + '.png']
+    textures = Path("./textures/")
+    for search in to_search:
+        searching = list(textures.glob(f"**/{search}"))
+        if len(searching) != 0:
+            return str(searching[0])
+    print(f'Could not find the icon for {icon}')
+    return None
 
 
 def get_requirements(biome):
-    '''
+    """
     Searches the config and gets the block requirements for the biome
-    '''
+    """
     # requirement = 'Blocks required:\n'
     requirement = ''
     if "contents" in biome.keys():
-        content = ["  " + humanify(key) +
-                   " - " + str(value) for key, value in biome["contents"].items()]
+        content = [f"  {humanify(key)} - {value}" for key, value in biome["contents"].items()]
         requirement += "\n".join(content)
     return requirement
 
 
 def add_fluid_requirement(biome, paragraph):
-    '''
+    """
     Searches the config and adds fluid requirements if they are present
-    '''
+    """
     coverage_types = ['water', 'lava', 'ice']
     if any((fl_type + 'coverage') in biome.keys() for fl_type in coverage_types):
         run = paragraph.add_run('\nFloor Coverage')
@@ -93,15 +90,12 @@ def create_doc():
         'Contents': 'Required blocks for the greenhouse to be valid.',
         'Plants': 'What plants can spawn if bonemeal is supplied to the greenhouse.',
         'Mobs': 'What mobs can spawn.',
-        'Mob limit': 'If the amount of mobs inside the greenhouse exceeds this, mobs ' +
+        'Mob limit': 'If the amount of mobs inside the greenhouse exceeds this, mobs '
                      'won’t spawn in the greenhouse.',
         'Floor Coverage': 'How much of the floor needs to be that kind of block. ',
         'Conversions': 'What blocks will convert to another block.',
         'Biome': 'What biome it will be inside of the greenhouse.'
     }
-
-    # Assume that the config to use is ./biomes.yml
-    # file_to_use = input('Enter the name of the biomes.yml to use >')
 
     # Add the title
     heading = document.add_heading('', 0)
@@ -121,8 +115,7 @@ def create_doc():
     # Write this date to the file as the last updated date
     updated_paragraph = document.add_paragraph('')
     updated_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run = updated_paragraph.add_run('Public Doc\nLast '
-                                    f'updated: {today}')
+    run = updated_paragraph.add_run(f'Public Doc\nLast updated: {today}')
     run.italic = True
     run.font.size = Pt(8)
 
@@ -136,8 +129,8 @@ def create_doc():
     # Next create the document
 
     # First parse all the data into a list of dictionary
-    with open("./biomes.yml") as file_object:
-        biomes_data = yaml.load(file_object, Loader=yaml.SafeLoader)
+    config_data = Path(CONFIG_PATH).read_text()
+    biomes_data = yaml.load(config_data, Loader=yaml.SafeLoader)
 
     for biome in biomes_data["biomes"].values():
         # Initialise the paragraph
@@ -165,7 +158,13 @@ def create_doc():
         icon_run = biome_paragraph.add_run("\nIcon: ")
         icon_run.bold = True
         biome_paragraph.add_run(humanify(icon))
-        icon_img_run.add_picture(icon_file, width=Cm(1), height=Cm(1))
+
+        img = images.load_and_color(icon_file, 50, 150, 50)
+        img_path = Path(f"{ICONS_PATH}/{icon.lower()}.png")
+        img_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(img_path), img)
+
+        icon_img_run.add_picture(str(img_path), width=Cm(1), height=Cm(1))
 
         # Cell 2 add the biome
         biome_run = biome_paragraph.add_run("\nBiome: ")
@@ -235,16 +234,15 @@ def create_doc():
             if 'player.nether' in biome['permission']:
                 permission_string += "  This biome can only be made in the nether"
             if 'biome.nether' in biome['permission']:
-                permission_string += '  This biome is possible to build in the overworld'
-                permission_string += '\nHowever it is exclusive to Donators'
-                permission_string += ' and Trusted ranked players'
+                permission_string += 'This biome is possible to build in the overworld\nHowever it is exclusive to ' \
+                                     'Donators and Trusted ranked players '
             run = biome_paragraph.add_run('\nPermissions: ')
             run.bold = True
             biome_paragraph.add_run(permission_string)
 
     document.add_page_break()
 
-    document.save('GreenhouseDocumentation.docx')
+    document.save(SAVE_PATH)
 
 
 if __name__ == '__main__':
