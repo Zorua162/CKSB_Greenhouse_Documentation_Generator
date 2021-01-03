@@ -1,7 +1,7 @@
 # Module for editing docx files
 import cv2
 from docx import Document
-from docx.shared import Cm, Pt
+from docx.shared import Cm, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 
 # Module for date for auto last updated
@@ -23,6 +23,24 @@ TEXTURES_PATH = "./textures/"
 ICONS_PATH = "./icons/"
 SAVE_PATH = "./GreenhouseDocumentation.docx"
 
+COLOUR_DICT = {
+        '4' :	'AA0000',
+        'c' :	'FF5555',
+        '6' :	'FFAA00',
+        'e' :	'FFFF55',
+        '2' :	'00AA00',
+        'a' :	'55FF55',
+        'b' :	'55FFFF',
+        '3' :	'00AAAA',
+        '1' :	'0000AA',
+        '9' :	'5555FF',
+        'd' :	'FF55FF',
+        '5' :	'AA00AA',
+        'f' :	'FFFFFF',
+        '7' :	'AAAAAA',
+        '8' :	'555555',
+        '0' :	'000000'
+        }
 
 def humanify(string):
     """
@@ -73,6 +91,21 @@ def add_fluid_requirement(biome, paragraph):
                 paragraph.add_run(f'\n  {biome[fluid_key]}% {fluid.capitalize()}')
             elif biome[fluid_key] == 0:
                 paragraph.add_run(f'\n  No {fluid.capitalize()}')
+
+def format_rgb(name):
+    """
+    format the rgb code given by the table in COLOUR_DICT into three codes
+    colour: 6 digit code that can be split into r, g, b
+    returns: r, g, b in the format: 0xXX, 0xXX, 0xXX where XX are colours
+    """
+    #Pull the mc colour code from the
+    rgb = COLOUR_DICT[name[1:2]]
+
+    r, g, b = (int(rgb[0:2], 16),
+               int(rgb[2:4], 16),
+               int(rgb[4:6], 16))
+    print(r, g, b)
+    return r, g, b
 
 
 def create_doc():
@@ -142,11 +175,16 @@ def create_doc():
             name = biome["friendlyname"]
             # format the friendly name depending on the colour codes
             if '&' in name:
-                friendly_name = "\n" + name[2:][:len(name) - 5] + ":"
+                friendly_name = "\n" + name[2:] + ":"
+                name_run = biome_paragraph.add_run(friendly_name)
+                print(name[1:2])
+                #name_run.font.color.rgb = RGBColor(0xff, 0x99, 0xcc)
+
+                name_run.font.color.rgb = RGBColor(*format_rgb(name))
             else:
                 friendly_name = "\n" + name + ":"
+                name_run = biome_paragraph.add_run(friendly_name)
 
-            name_run = biome_paragraph.add_run(friendly_name)
             name_run.bold = True
             name_run.font.size = Pt(13)
 
