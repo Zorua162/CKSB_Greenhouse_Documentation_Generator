@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 CKSB_Greenhouse_Documentation_Generator
 
 + Added icons to the document
@@ -12,6 +13,3 @@ Unzip this jar archive.
 
 Copy/Move the folders `/minecraft/textures/block` and `/minecraft/textures/item'
 to the same directory as the script.
-
-
-
