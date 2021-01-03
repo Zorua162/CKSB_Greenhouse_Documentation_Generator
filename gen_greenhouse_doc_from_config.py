@@ -169,7 +169,7 @@ def create_doc():
 
         #Cell 3 add the requirements
         requirements = get_requirements(biome)
-        requirements_run = biome_paragraph.add_run('\nRequirements:\n')
+        requirements_run = biome_paragraph.add_run('\nContents:\n')
         requirements_run.bold = True
         requirements_run = biome_paragraph.add_run(requirements)
 
@@ -199,22 +199,23 @@ def create_doc():
         if 'plants' in biome.keys():
             for plant, data in biome['plants'].items():
                 chance, grows_on = data.split(':')
-                plants_string += '\n  ' + humanify(plant) + ' will grow with a '
-                plants_string += chance + '% on ' + humanify(grows_on)
+                plants_string += '\n  ' + humanify(plant) + ' - ' + chance
+                plants_string +=  '% on top of ' + humanify(grows_on) + '.'
             run = biome_paragraph.add_run('\nPlants: ')
             run.bold = True
             biome_paragraph.add_run(plants_string)
 
         #Cell 6 add the mobs
         if 'mobs' in biome.keys():
-            mobs_string = ''
+            run = biome_paragraph.add_run('\nMobs: ')
             for mob, data in biome['mobs'].items():
                 chance, spawns_on = data.split(':')
-                mobs_string += '\n  ' + humanify(mob) + ' will spawn on '
-                mobs_string += humanify(spawns_on)
-                run = biome_paragraph.add_run('\nMobs: ')
-                run.bold = True
-            biome_paragraph.add_run(mobs_string)
+                #mobs_string += '\n  ' + humanify(mob) + ' will spawn on '
+                #mobs_string += humanify(spawns_on)
+                #run.bold = True
+                run = biome_paragraph.add_run(mob)
+                run.italic = True
+
             if 'moblimit' in biome.keys():
                 #mobs_string += f'\n The mob limit for this greenhouse is {biome["moblimit"]}'
                 run = biome_paragraph.add_run('\nMoblimit: ')
