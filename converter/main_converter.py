@@ -143,8 +143,8 @@ def create_doc():
         'Plants': 'What plants can spawn if bonemeal is supplied to the '
         'greenhouse.',
         'Mobs': 'What mobs can spawn.',
-        'Mob limit': 'If the amount of mobs inside the greenhouse exceeds '
-        'this, mobs won’t spawn in the greenhouse.',
+        'Mob limit': 'Approximate area of the greenhouse required to spawn a'
+        'mob. For example if this is 9 then a greenhouse of area 9 will spawn this, mobs won’t spawn in the greenhouse.',
         'Floor Coverage': 'How much of the floor needs to be that '
         'kind of block. ',
         'Conversions': 'What blocks will convert to another block.',
