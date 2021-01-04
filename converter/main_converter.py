@@ -8,7 +8,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 from datetime import date
 
 # Module for parsiing the config file
-
 import yaml
 
 # Warn if something goes wrong
@@ -23,24 +22,27 @@ TEXTURES_PATH = "./textures/"
 ICONS_PATH = "./icons/"
 SAVE_PATH = "./GreenhouseDocumentation.docx"
 
+COVERAGE_TYPES = ['water', 'lava', 'ice']
+
 COLOUR_DICT = {
-        '4' :	'AA0000',
-        'c' :	'FF5555',
-        '6' :	'FFAA00',
-        'e' :	'FFFF55',
-        '2' :	'00AA00',
-        'a' :	'55FF55',
-        'b' :	'55FFFF',
-        '3' :	'00AAAA',
-        '1' :	'0000AA',
-        '9' :	'5555FF',
-        'd' :	'FF55FF',
-        '5' :	'AA00AA',
-        'f' :	'FFFFFF',
-        '7' :	'AAAAAA',
-        '8' :	'555555',
-        '0' :	'000000'
+        '4':	'AA0000',
+        'c':	'FF5555',
+        '6':	'FFAA00',
+        'e':	'FFFF55',
+        '2':	'00AA00',
+        'a':	'55FF55',
+        'b':	'55FFFF',
+        '3':	'00AAAA',
+        '1':	'0000AA',
+        '9':	'5555FF',
+        'd':	'FF55FF',
+        '5':	'AA00AA',
+        'f':	'FFFFFF',
+        '7':	'AAAAAA',
+        '8':	'555555',
+        '0':	'000000'
         }
+
 
 def humanify(string):
     """
@@ -50,6 +52,9 @@ def humanify(string):
 
 
 def get_icon(icon):
+    """
+    Get the icon string from the biomes data
+    """
     icon = icon.lower()
     icon_blockless = icon.replace('_block', '')
     icon_top = icon_blockless + '_top'
@@ -65,12 +70,14 @@ def get_icon(icon):
 
 def get_requirements(biome):
     """
-    Searches the config and gets the block requirements for the biome
+    Turns contents: into a formatted string of block - number pairs for display
     """
-    # requirement = 'Blocks required:\n'
     requirement = ''
+    # Check biome has required blocks, avoids error if none required
     if "contents" in biome.keys():
-        content = [f"  {humanify(key)} - {value}" for key, value in biome["contents"].items()]
+        must_cont = biome["contents"].items()
+        # For each required block add a line to the list for it
+        content = [f"   {humanify(key)} - {value}" for key, value in must_cont]
         requirement += "\n".join(content)
     return requirement
 
@@ -79,18 +86,22 @@ def add_fluid_requirement(biome, paragraph):
     """
     Searches the config and adds fluid requirements if they are present
     """
-    coverage_types = ['water', 'lava', 'ice']
-    if any((fl_type + 'coverage') in biome.keys() for fl_type in coverage_types):
+    # First check that the biome requires a fluid, if so add heading for it
+    if any((fld + 'coverage') in biome.keys() for fld in COVERAGE_TYPES):
         run = paragraph.add_run('\nFloor Coverage')
         run.bold = True
 
+    # Check which of the fluids needs adding and format/ add it
     for fluid in coverage_types:
         fluid_key = fluid + 'coverage'
         if fluid_key in biome.keys():
+            # If the fluid coverage is 0 then it means none is allowed
             if biome[fluid_key] > 0:
-                paragraph.add_run(f'\n  {biome[fluid_key]}% {fluid.capitalize()}')
+                paragraph.add_run(f'\n  {biome[fluid_key]}%'
+                                  f'{fluid.capitalize()}')
             elif biome[fluid_key] == 0:
                 paragraph.add_run(f'\n  No {fluid.capitalize()}')
+
 
 def format_rgb(name):
     """
@@ -98,13 +109,13 @@ def format_rgb(name):
     colour: 6 digit code that can be split into r, g, b
     returns: r, g, b in the format: 0xXX, 0xXX, 0xXX where XX are colours
     """
-    #Pull the mc colour code from the
+    # Pull the mc colour code from the friendly name
     rgb = COLOUR_DICT[name[1:2]]
 
+    # Format it to be three colours 0-255 rgb format
     r, g, b = (int(rgb[0:2], 16),
                int(rgb[2:4], 16),
                int(rgb[4:6], 16))
-    print(r, g, b)
     return r, g, b
 
 
@@ -121,11 +132,14 @@ def create_doc():
     table_key = {
         'Icon': 'What shows up in the in game inventory.',
         'Contents': 'Required blocks for the greenhouse to be valid.',
-        'Plants': 'What plants can spawn if bonemeal is supplied to the greenhouse.',
+        'Plants': 'What plants can spawn if bonemeal is supplied to the '
+        'greenhouse.',
         'Mobs': 'What mobs can spawn.',
-        'Mob limit': 'If the amount of mobs inside the greenhouse exceeds this, mobs '
+        'Mob limit': 'If the amount of mobs inside the greenhouse exceeds '
+        'this, mobs '
                      'won’t spawn in the greenhouse.',
-        'Floor Coverage': 'How much of the floor needs to be that kind of block. ',
+        'Floor Coverage': 'How much of the floor needs to be that '
+        'kind of block. ',
         'Conversions': 'What blocks will convert to another block.',
         'Biome': 'What biome it will be inside of the greenhouse.'
     }
@@ -164,7 +178,6 @@ def create_doc():
     # First parse all the data into a list of dictionary
     config_data = Path(CONFIG_PATH).read_text()
     biomes_data = yaml.load(config_data, Loader=yaml.SafeLoader)
-
     for biome in biomes_data["biomes"].values():
         # Initialise the paragraph
         biome_paragraph = document.add_paragraph('')
@@ -177,9 +190,6 @@ def create_doc():
             if '&' in name:
                 friendly_name = "\n" + name[2:] + ":"
                 name_run = biome_paragraph.add_run(friendly_name)
-                print(name[1:2])
-                #name_run.font.color.rgb = RGBColor(0xff, 0x99, 0xcc)
-
                 name_run.font.color.rgb = RGBColor(*format_rgb(name))
             else:
                 friendly_name = "\n" + name + ":"
@@ -227,10 +237,12 @@ def create_doc():
                 output = conversion.split(':')
                 if len(output) == 2:
                     percentage, output_block = output
-                    conversion = f'{humanify(input_block)} -> {humanify(output_block)} : {percentage}% chance.'
+                    conversion = f'{humanify(input_block)} -> '
+                    '{humanify(output_block)} : {percentage}% chance.'
                 elif len(output) == 3:
                     percentage, output_block, adjacent = output
-                    conversion = f'{humanify(input_block)} -> {humanify(output_block)} : {percentage}% chance.'
+                    conversion = f'{humanify(input_block)} -> '
+                    '{humanify(output_block)} : {percentage}% chance.'
                 conversions += f'\n  ' + conversion
             conversions = biome_paragraph.add_run(conversions)
 
@@ -240,7 +252,7 @@ def create_doc():
             for plant, data in biome['plants'].items():
                 chance, grows_on = data.split(':')
                 plants_string += '\n  ' + humanify(plant) + ' - ' + chance
-                plants_string +=  '% on top of ' + humanify(grows_on) + '.'
+                plants_string += '% on top of ' + humanify(grows_on) + '.'
             run = biome_paragraph.add_run('\nPlants: ')
             run.bold = True
             biome_paragraph.add_run(plants_string)
@@ -250,14 +262,13 @@ def create_doc():
             run = biome_paragraph.add_run('\nMobs: ')
             for mob, data in biome['mobs'].items():
                 chance, spawns_on = data.split(':')
-                #mobs_string += '\n  ' + humanify(mob) + ' will spawn on '
-                #mobs_string += humanify(spawns_on)
-                #run.bold = True
+                # mobs_string += '\n  ' + humanify(mob) + ' will spawn on '
+                # mobs_string += humanify(spawns_on)
+                # run.bold = True
                 run = biome_paragraph.add_run(mob)
                 run.italic = True
 
             if 'moblimit' in biome.keys():
-                # mobs_string += f'\n The mob limit for this greenhouse is {biome["moblimit"]}'
                 run = biome_paragraph.add_run('\nMoblimit: ')
                 run.bold = True
                 biome_paragraph.add_run(str(biome['moblimit']))
@@ -269,11 +280,14 @@ def create_doc():
         if 'permission' in biome.keys():
             permission_string = '\n'
             if 'player.overworld' in biome['permission']:
-                permission_string += "  This biome can only be made in the overworld"
+                permission_string += '  This biome can only be made in ' \
+                                     'the overworld'
             if 'player.nether' in biome['permission']:
-                permission_string += "  This biome can only be made in the nether"
+                permission_string += '  This biome can only be made in ' \
+                                     'the nether'
             if 'biome.nether' in biome['permission']:
-                permission_string += 'This biome is possible to build in the overworld\nHowever it is exclusive to ' \
+                permission_string += 'This biome is possible to build in the' \
+                                     'overworld\nHowever it is exclusive to ' \
                                      'Donators and Trusted ranked players '
             run = biome_paragraph.add_run('\nPermissions: ')
             run.bold = True
