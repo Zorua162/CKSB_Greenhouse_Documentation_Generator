@@ -90,15 +90,14 @@ def add_fluid_requirement(biome, paragraph):
     if any((fld + 'coverage') in biome.keys() for fld in COVERAGE_TYPES):
         run = paragraph.add_run('\nFloor Coverage')
         run.bold = True
-
     # Check which of the fluids needs adding and format/ add it
-    for fluid in coverage_types:
+    for fluid in COVERAGE_TYPES:
         fluid_key = fluid + 'coverage'
         if fluid_key in biome.keys():
             # If the fluid coverage is 0 then it means none is allowed
             if biome[fluid_key] > 0:
-                paragraph.add_run(f'\n  {biome[fluid_key]}%'
-                                  f'{fluid.capitalize()}')
+                paragraph.add_run(f'\n  {fluid.capitalize()} -> '
+                                  f'{biome[fluid_key]}%')
             elif biome[fluid_key] == 0:
                 paragraph.add_run(f'\n  No {fluid.capitalize()}')
 
@@ -125,8 +124,10 @@ def create_doc():
     """
     # Creates a blank template document
     document = Document()
-    # for style in document.styles:
-    #    print(style)
+    for style in document.styles:
+        # Set for every style except list no
+        if style.name != 'No List':
+            style.font.name = 'Arial'
 
     # key table taken from the original document
     table_key = {
@@ -146,7 +147,7 @@ def create_doc():
 
     # Add the title
     heading = document.add_heading('', 0)
-    run = heading.add_run('Greenhouses Biomes Guide')
+    run = heading.add_run('Greenhouses Biomes Config')
     run.bold = True
     run.italics = True
 
@@ -252,21 +253,28 @@ def create_doc():
             for plant, data in biome['plants'].items():
                 chance, grows_on = data.split(':')
                 plants_string += '\n  ' + humanify(plant) + ' - ' + chance
-                plants_string += '% on top of ' + humanify(grows_on) + '.'
+                plants_string += '% on ' + humanify(grows_on) + '.'
             run = biome_paragraph.add_run('\nPlants: ')
             run.bold = True
             biome_paragraph.add_run(plants_string)
 
         # Cell 6 add the mobs
         if 'mobs' in biome.keys():
-            run = biome_paragraph.add_run('\nMobs: ')
+            run = biome_paragraph.add_run('\nMobs:\n    ')
+            run.bold = True
             for mob, data in biome['mobs'].items():
                 chance, spawns_on = data.split(':')
-                # mobs_string += '\n  ' + humanify(mob) + ' will spawn on '
-                # mobs_string += humanify(spawns_on)
-                # run.bold = True
-                run = biome_paragraph.add_run(mob)
-                run.italic = True
+                # Mob name is in italics so this must be in a seperate run
+                run = biome_paragraph.add_run(humanify(mob))
+                # Removed italics for consistency throughout the document
+                # run.italic = True
+                # now add the chance and block
+                # some mobs can spawn in water so check if the block is water
+                spawn_loc = 'on '
+                if spawns_on == 'water':
+                    spawn_loc = 'in'
+                mob_string = f' - {chance}% {spawn_loc} {humanify(spawns_on)}'
+                biome_paragraph.add_run(mob_string)
 
             if 'moblimit' in biome.keys():
                 run = biome_paragraph.add_run('\nMoblimit: ')
@@ -287,8 +295,8 @@ def create_doc():
                                      'the nether'
             if 'biome.nether' in biome['permission']:
                 permission_string += 'This biome is possible to build in the' \
-                                     'overworld\nHowever it is exclusive to ' \
-                                     'Donators and Trusted ranked players '
+                                     ' overworld\nHowever it is exclusive ' \
+                                     'to Donators and Trusted ranked players '
             run = biome_paragraph.add_run('\nPermissions: ')
             run.bold = True
             biome_paragraph.add_run(permission_string)

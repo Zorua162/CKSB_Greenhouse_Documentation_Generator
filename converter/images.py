@@ -113,4 +113,3 @@ def is_grayscale(img):
             else:
                 return False
     return True
-
