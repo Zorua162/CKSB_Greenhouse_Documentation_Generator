@@ -128,7 +128,14 @@ def create_doc():
         # Set for every style except list no
         if style.name != 'No List':
             style.font.name = 'Arial'
-
+    # changing the page margins to be the same as the old marigins
+    sections = document.sections
+    for section in sections:
+        margin = 1.27
+        section.top_margin = Cm(margin)
+        section.bottom_margin = Cm(margin)
+        section.left_margin = Cm(margin)
+        section.right_margin = Cm(margin)
     # key table taken from the original document
     table_key = {
         'Icon': 'What shows up in the in game inventory.',
@@ -137,8 +144,7 @@ def create_doc():
         'greenhouse.',
         'Mobs': 'What mobs can spawn.',
         'Mob limit': 'If the amount of mobs inside the greenhouse exceeds '
-        'this, mobs '
-                     'won’t spawn in the greenhouse.',
+        'this, mobs won’t spawn in the greenhouse.',
         'Floor Coverage': 'How much of the floor needs to be that '
         'kind of block. ',
         'Conversions': 'What blocks will convert to another block.',
@@ -148,8 +154,10 @@ def create_doc():
     # Add the title
     heading = document.add_heading('', 0)
     run = heading.add_run('Greenhouses Biomes Config')
+    run.font.size = 14
+    run.font.color.rgb = RGBColor(0, 0, 0)
     run.bold = True
-    run.italics = True
+    run.underline = True
 
     # Not working warning:
     strikethrough = document.add_paragraph('')
@@ -252,8 +260,8 @@ def create_doc():
         if 'plants' in biome.keys():
             for plant, data in biome['plants'].items():
                 chance, grows_on = data.split(':')
-                plants_string += '\n  ' + humanify(plant) + ' - ' + chance
-                plants_string += '% on ' + humanify(grows_on) + '.'
+                plants_string += f'\n  {humanify(plant)} - {chance}% chance to'
+                plants_string += f' grow on {humanify(grows_on)} .'
             run = biome_paragraph.add_run('\nPlants: ')
             run.bold = True
             biome_paragraph.add_run(plants_string)
@@ -301,7 +309,7 @@ def create_doc():
             run.bold = True
             biome_paragraph.add_run(permission_string)
 
-    document.add_page_break()
+    # document.add_page_break()
 
     document.save(SAVE_PATH)
 
