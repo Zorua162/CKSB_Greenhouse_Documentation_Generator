@@ -145,7 +145,7 @@ def create_doc():
         'Mobs': 'What mobs can spawn.',
         'Mob limit': 'Area of the greenhouse required to spawn a '
         'mob. For example if this is 9 then a greenhouse of area 9 will be '
-        'able to spawn 1 mob.'
+        'able to spawn 1 mob.',
         'Floor Coverage': 'How much of the floor needs to be that '
         'kind of block. ',
         'Conversions': 'What blocks will convert to another block.',
