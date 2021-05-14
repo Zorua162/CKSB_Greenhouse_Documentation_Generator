@@ -7,7 +7,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 # Module for date for auto last updated
 from datetime import date
 
-# Module for parsiing the config file
+# Module for parsing the config file
 import yaml
 
 # Warn if something goes wrong
@@ -24,6 +24,7 @@ SAVE_PATH = "./GreenhouseDocumentation.docx"
 
 COVERAGE_TYPES = ['water', 'lava', 'ice']
 
+# Note &f and &2 are the same so white is black which is more legible
 COLOUR_DICT = {
         '4':	'AA0000',
         'c':	'FF5555',
@@ -37,7 +38,7 @@ COLOUR_DICT = {
         '9':	'5555FF',
         'd':	'FF55FF',
         '5':	'AA00AA',
-        'f':	'FFFFFF',
+        'f':	'000000',
         '7':	'AAAAAA',
         '8':	'555555',
         '0':	'000000'
@@ -77,7 +78,7 @@ def get_requirements(biome):
     if "contents" in biome.keys():
         must_cont = biome["contents"].items()
         # For each required block add a line to the list for it
-        content = [f"   {humanify(key)} - {value}" for key, value in must_cont]
+        content = [f"    {humanify(key)} - {valu}" for key, valu in must_cont]
         requirement += "\n".join(content)
     return requirement
 
@@ -96,10 +97,10 @@ def add_fluid_requirement(biome, paragraph):
         if fluid_key in biome.keys():
             # If the fluid coverage is 0 then it means none is allowed
             if biome[fluid_key] > 0:
-                paragraph.add_run(f'\n  {fluid.capitalize()} -> '
+                paragraph.add_run(f'\n    {fluid.capitalize()} - > '
                                   f'{biome[fluid_key]}%')
             elif biome[fluid_key] == 0:
-                paragraph.add_run(f'\n  No {fluid.capitalize()}')
+                paragraph.add_run(f'\n    No {fluid.capitalize()}')
 
 
 def format_rgb(name):
@@ -138,31 +139,31 @@ def create_doc():
         section.right_margin = Cm(margin)
     # key table taken from the original document
     table_key = {
-        'Icon': 'What shows up in the in game inventory.',
+        'Icon': 'What shows up in the greenhouses GUI.',
+        'Biome': 'What biome it will be inside of the greenhouse.',
         'Contents': 'Required blocks for the greenhouse to be valid.',
-        'Plants': 'What plants can spawn if bonemeal is supplied to the '
+        'Floor Coverage': 'How much of the floor needs to be that '
+        'kind of block. ',
+        'Plants': 'What plants can spawn if Bonemeal is supplied to the '
         'greenhouse.',
         'Mobs': 'What mobs can spawn.',
         'Mob limit': 'Area of the greenhouse required to spawn a '
         'mob. For example if this is 9 then a greenhouse of area 9 will be '
         'able to spawn 1 mob.',
-        'Floor Coverage': 'How much of the floor needs to be that '
-        'kind of block. ',
-        'Conversions': 'What blocks will convert to another block.',
-        'Biome': 'What biome it will be inside of the greenhouse.'
+        'Conversions': 'What blocks will convert to another block.'
     }
 
     # Add the title
-    heading = document.add_heading('', 0)
-    run = heading.add_run('Greenhouses Biomes Config')
-    run.font.size = 14
-    run.font.color.rgb = RGBColor(0, 0, 0)
-    run.bold = True
-    run.underline = True
+    heading = document.add_heading('Greenhouses Biomes Config', 0)
+    # run = heading.add_run('Greenhouses Biomes Config')
+    # run.font.size = 14
+    # run.font.color.rgb = RGBColor(0, 0, 0)
+    # run.bold = True
+    # run.underline = True
 
     # Not working warning:
     strikethrough = document.add_paragraph('')
-    run = strikethrough.add_run('# strike through highlighted text '
+    run = strikethrough.add_run('# strikethrough highlighted text '
                                 '= not functioning')
     run.italics = True
     run.font.highlight_color = WD_COLOR_INDEX.YELLOW
@@ -172,9 +173,10 @@ def create_doc():
     # Write this date to the file as the last updated date
     updated_paragraph = document.add_paragraph('')
     updated_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run = updated_paragraph.add_run(f'Public Doc\nLast updated: {today}')
-    run.italic = True
-    run.font.size = Pt(8)
+    run_updated = updated_paragraph.add_run(f'Public Doc\nLast updated: '
+                                            f'{today}')
+    run_updated.italic = True
+    run_updated.font.size = Pt(8)
 
     # Add the key to the top of the document
     key_paragraph = document.add_paragraph('')
@@ -190,7 +192,7 @@ def create_doc():
     biomes_data = yaml.load(config_data, Loader=yaml.SafeLoader)
     for biome in biomes_data["biomes"].values():
         # Initialise the paragraph
-        biome_paragraph = document.add_paragraph('')
+        biome_paragraph = document.add_paragraph('\n\n')
         # Add an empty run here for the icon to be added to later
         icon_img_run = biome_paragraph.add_run('')
         # Item 0 the friendly name
@@ -199,6 +201,9 @@ def create_doc():
             # format the friendly name depending on the colour codes
             if '&' in name:
                 friendly_name = "\n" + name[2:] + ":"
+                # Catch if the attempted fix to the colour bug was used
+                if '&' in name[-4:]:
+                    friendly_name = friendly_name[:-4]
                 name_run = biome_paragraph.add_run(friendly_name)
                 name_run.font.color.rgb = RGBColor(*format_rgb(name))
             else:
@@ -230,30 +235,35 @@ def create_doc():
         biome_run = biome_paragraph.add_run(humanify(biome['biome']))
 
         # Cell 3 add the requirements
-        requirements = get_requirements(biome)
-        requirements_run = biome_paragraph.add_run('\nContents:\n')
-        requirements_run.bold = True
-        requirements_run = biome_paragraph.add_run(requirements)
+        # First check if any contents are needed (ex ocean doesn't have any
+        if "contents" in biome:
+            requirements = get_requirements(biome)
+            requirements_run = biome_paragraph.add_run('\nContents:\n')
+            requirements_run.bold = True
+            requirements_run = biome_paragraph.add_run(requirements)
 
         # Add the Floor Coverage requirement
         add_fluid_requirement(biome, biome_paragraph)
 
         # Cell 4 add the Conversions
         if "conversions" in biome:
+            conversions_title = biome_paragraph.add_run('\nConversions:')
+            conversions_title.bold = True
             conversions = ''
             # print(biome['conversions'])
             for input_block, conversion in biome['conversions'].items():
-                # print(input_block, conversion)
                 output = conversion.split(':')
                 if len(output) == 2:
                     percentage, output_block = output
-                    conversion = f'{humanify(input_block)} -> '
-                    '{humanify(output_block)} : {percentage}% chance.'
+                    conversion = f'{humanify(input_block)} -> ' \
+                                 f'{humanify(output_block)} : {percentage} ' \
+                                 '% chance.'
                 elif len(output) == 3:
                     percentage, output_block, adjacent = output
-                    conversion = f'{humanify(input_block)} -> '
-                    '{humanify(output_block)} : {percentage}% chance.'
-                conversions += f'\n  ' + conversion
+                    conversion = f'{humanify(input_block)} -> ' \
+                                 f'{humanify(output_block)} : {percentage}% ' \
+                                 f'chance : Next to {humanify(adjacent)}'
+                conversions += f'\n    ' + conversion
             conversions = biome_paragraph.add_run(conversions)
 
         # Cell 5 add the plants
@@ -261,32 +271,29 @@ def create_doc():
         if 'plants' in biome.keys():
             for plant, data in biome['plants'].items():
                 chance, grows_on = data.split(':')
-                plants_string += f'\n  {humanify(plant)} - {chance}% chance to'
-                plants_string += f' grow on {humanify(grows_on)} .'
+                plants_string += f'\n    {humanify(plant)} - {chance}% chance'
+                plants_string += f' to grow on {humanify(grows_on)}'
             run = biome_paragraph.add_run('\nPlants: ')
             run.bold = True
             biome_paragraph.add_run(plants_string)
 
         # Cell 6 add the mobs
         if 'mobs' in biome.keys():
-            run = biome_paragraph.add_run('\nMobs:\n    ')
+            run = biome_paragraph.add_run('\nMobs:\n')
             run.bold = True
             for mob, data in biome['mobs'].items():
                 chance, spawns_on = data.split(':')
-                # Mob name is in italics so this must be in a seperate run
-                run = biome_paragraph.add_run(humanify(mob))
-                # Removed italics for consistency throughout the document
-                # run.italic = True
-                # now add the chance and block
                 # some mobs can spawn in water so check if the block is water
                 spawn_loc = 'on '
-                if spawns_on == 'water':
+                if (spawns_on == 'Water' or spawns_on == 'water' or
+                        spawns_on == 'WATER'):
                     spawn_loc = 'in'
-                mob_string = f' - {chance}% {spawn_loc} {humanify(spawns_on)}'
+                mob_string = f'    {humanify(mob)} - {chance}% {spawn_loc}' \
+                             f' {humanify(spawns_on)} with air on top\n'
                 biome_paragraph.add_run(mob_string)
 
             if 'moblimit' in biome.keys():
-                run = biome_paragraph.add_run('\nMoblimit: ')
+                run = biome_paragraph.add_run('Moblimit: ')
                 run.bold = True
                 biome_paragraph.add_run(str(biome['moblimit']))
 
@@ -297,15 +304,20 @@ def create_doc():
         if 'permission' in biome.keys():
             permission_string = '\n'
             if 'player.overworld' in biome['permission']:
-                permission_string += '  This biome can only be made in ' \
-                                     'the overworld'
+                permission_string += '    This biome can only be made in ' \
+                                     'the Overworld.'
             if 'player.nether' in biome['permission']:
-                permission_string += '  This biome can only be made in ' \
-                                     'the nether'
+                permission_string += '    This biome can only be made in ' \
+                                     'the Nether'
             if 'biome.nether' in biome['permission']:
-                permission_string += 'This biome is possible to build in the' \
-                                     ' overworld\nHowever it is exclusive ' \
-                                     'to Donators and Trusted ranked players '
+                permission_string += '    This biome is possible to build ' \
+                                     'in the Overworld\n    However it is ' \
+                                     'exclusive to Donators and Trusted ' \
+                                     'ranked players.'
+            if 'biome.yogurt' in biome['permission']:
+                permission_string += '\n    This biome is only avaliable to ' \
+                                     'players with donator1.'
+
             run = biome_paragraph.add_run('\nPermissions: ')
             run.bold = True
             biome_paragraph.add_run(permission_string)
